@@ -6,6 +6,8 @@ Configure basic settings for the Raspberry Pi with Ansible without the need to r
 Heavily based on the raspi-config nonint option, but NOT 100% ported!
 Change vars at the beginning of yml file to suit your needs.
 
+Run with: "ansible-playbook -i hosts raspi-config.yml"
+
 Works:
 - Change hostname
 - Set boot behaviour (cli/desktop/autologin)
