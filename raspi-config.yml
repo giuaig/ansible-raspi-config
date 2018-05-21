@@ -1,0 +1,468 @@
+---
+- hosts: all
+  remote_user: pi
+  become: True
+  gather_facts: True
+  
+  vars:
+    REBOOT: True #Should i reboot at the end of this playbook?
+    UPDATE: True
+    HOSTNAME: "picampo"
+    MEMSPLIT: "128"
+    BOOTBEHAVIOUR: "B1" #B1 cli, B2 cli autologin, B3 desktop, B4 desktop autologin
+    LOCALE: "it_IT.UTF-8"
+    TIMEZONE: "Europe/Rome"
+    XKBLAYOUT: "it" #default "gb"
+    NETNAMES: False
+    SSH: True
+    SERIAL: True
+    CAMERA: True
+    VNC: False
+    SPI: False
+    I2C: True
+    ONEWIRE: True
+    RGPIO: False
+    WIFI_COUNTRY: "IT"
+    BOOTWAIT: False
+    BOOTSPLASH: False
+    OVERSCAN: False
+    OVERCLOCK: False
+    HDMI_GROUP: False
+    HDMI_MOD: False
+    PIXDUB: False
+    AUDIO_OUT: "0" #0 Auto, 1 Force 3.5mm, 2 Force hdmi
+    GLDRIVER: False #G1 Full KMS, G2 Fake KMS, G3 Legacy
+
+  tasks:
+#Update
+    - name: Update raspi-config itself
+      become: true
+      apt: name=raspi-config update_cache=yes state=present cache_valid_time=3600
+      when: UPDATE == True
+
+#Get some basic info
+    - name: Get Raspberry Pi type
+      shell: "raspi-config nonint get_pi_type"
+      register: pi_type
+      changed_when: False
+
+    - name: Show pi version
+      debug:
+        msg: "Pi version: {{ pi_type.stdout }}"
+
+#1 Change user password
+
+    # ansible-vault and user module ??
+    #- name: Change user password
+    #shell: "(echo '{{ NEWPASSWORD }}' ; echo '{{ NEWPASSWORD }}') | passwd {{ USER }}"
+
+#2 Network Options
+
+    #N1 Hostname
+    - name: Get hostname
+      shell: "raspi-config nonint get_hostname"
+      register: pi_hostname
+      changed_when: False
+
+    - name: Print current hostname
+      debug:
+        msg: "Current hostname: {{ pi_hostname.stdout }}"
+
+    - name: Change hostname
+      shell: "raspi-config nonint do_hostname {{ HOSTNAME }}"
+      when: pi_hostname.stdout != HOSTNAME
+
+    #N2 Wi-fi
+    #- name: Set WiFi credentials
+      #shell: "raspi-config nonint do_wifi_ssid_passphrase {{ SSID }} {{ PASSPHRASE }}"
+    
+    #N3 Network interface names
+    - name: Get network names status
+      shell: "raspi-config nonint get_net_names"
+      register: pi_netnames
+      changed_when: False
+
+    - name: Print current network names status
+      debug:
+        msg: "Current network names status: {{ pi_netnames.stdout }}"
+
+    - name: Enable network names
+      shell: "raspi-config nonint do_net_names 0"
+      when: (NETNAMES == True) and (pi_netnames.stdout != '0')
+
+    - name: Disable network names
+      shell: "raspi-config nonint do_net_names 1"
+      when: (NETNAMES == True) and (pi_netnames.stdout != '1')
+
+#3 Boot Options
+
+    #B1 Desktop / CLI
+    - name: Get boot CLI
+      shell: "raspi-config nonint get_boot_cli"
+      register: boot_cli
+      changed_when: False
+
+    - name: Print boot CLI
+      debug: 
+        msg: "Boot CLI is: {{ boot_cli.stdout }}"
+
+    - name: Get boot autologin
+      shell: "raspi-config nonint get_autologin"
+      register: auto_login
+      changed_when: False
+
+    - name: Print boot autologin status
+      debug: 
+        msg: "Boot autologin is: {{ auto_login.stdout }}"
+
+    #B1 cli, B2 cli autologin, B3 desktop, B4 desktop autologin
+    - name: Set Boot behaviour
+      shell: "raspi-config nonint do_boot_behaviour {{ BOOTBEHAVIOUR }}"
+
+    #B2 Wait for Network at Boot
+    - name: Get boot wait for network status
+      shell: "raspi-config nonint get_boot_wait"
+      register: boot_wait
+      changed_when: False
+
+    - name: Print boot wait for network status
+      debug: 
+        msg: "Boot wait is: {{ boot_wait.stdout }}"
+
+      #- name: Set boot wait network status
+      #shell: "raspi-config nonint do_boot_wait {{ BOOTWAIT }}"
+
+    #B3 Splash Screen
+    - name: Get splash status
+      shell: "raspi-config nonint get_boot_splash"
+      register: boot_splash
+      changed_when: False
+
+    - name: Print boot splash status
+      debug: 
+        msg: "Boot splash status is: {{ boot_splash.stdout }}"
+
+      #- name: Set boot splash
+      #shell: "raspi-config nonint do_boot_splash {{ BOOTSPLASH }}"
+
+#4 Localisation Options
+
+    #I1 Change Locale
+    - name: Change locale
+      shell: "raspi-config nonint do_change_locale {{ LOCALE }}"
+
+    #I2 Change Timezone
+    - name: Change timezone
+      shell: "raspi-config nonint do_change_timezone {{ TIMEZONE }}"
+
+    #I3 Change Keyboard Layout
+    - name: Change keyboard layout
+      shell: "raspi-config nonint do_configure_keyboard {{ XKBLAYOUT }}"
+
+    #I4 Change Wi-fi Country
+    - name: Get WiFi country
+      shell: "raspi-config nonint get_wifi_country"
+      register: wifi_country
+      changed_when: False
+
+    - name: Print current WiFi country
+      debug: 
+        msg: "Wifi country is: {{ wifi_country.stdout }}" 
+
+    #- name: Set WiFi country
+    #shell: "raspi-config nonint do_wifi_country {{ WIFI_COUNTRY }}"
+
+#5 Interfacing Options
+        
+    #P1 CAMERA
+    - name: Get camera status
+      shell: "raspi-config nonint get_camera"
+      register: camera_status
+      changed_when: False
+
+    - name: Print camera status
+      debug:
+        msg: "Camera status is: {{ camera_status.stdout }}"
+
+    - name: Enable Camera
+      shell: "raspi-config nonint do_camera 0"
+      when: (CAMERA == True) and (camera_status.stdout != '0')
+
+    - name: Disable Camera
+      shell: "raspi-config nonint do_camera 1"
+      when: (CAMERA == False) and (camera_status.stdout != '1')
+
+    #P2 SSH
+    - name: Check if SSH is enabled or not
+      shell: "raspi-config nonint get_ssh"
+      register: ssh_status
+      changed_when: False
+
+    - name: Print SSH status
+      debug: 
+        msg: "SSH status is: {{ ssh_status.stdout }}"
+
+    - name: Enable SSH
+      shell: "raspi-config nonint do_ssh 0"
+      when: (SSH == True) and (ssh_status.stdout != '0')
+
+    - name: Disable SSH
+      shell: "raspi-config nonint do_ssh 1"
+      when: (SSH == False) and (ssh_status.stdout != '1')
+
+    #P3 VNC
+    - name: Get VNC status
+      shell: "raspi-config nonint get_vnc"
+      register: vnc_status
+      changed_when: False
+
+    - name: Print VNC status
+      debug:
+        msg: "VNC status is: {{ vnc_status.stdout }}"
+
+    - name: Enable VNC
+      shell: "raspi-config nonint do_vnc 0"
+      when: (VNC == True) and (vnc_status.stdout != '0')
+
+    - name: Disable VNC
+      shell: "raspi-config nonint do_vnc 1"
+      when: (VNC == False) and (vnc_status.stdout != '1')
+
+    #P4 SPI
+    - name: Get SPI status
+      shell: "raspi-config nonint get_spi"
+      register: spi_status
+      changed_when: False
+
+    - name: Print SPI status
+      debug:
+        msg: "SPI status is: {{ spi_status.stdout }}"
+
+    - name: Enable SPI
+      shell: "raspi-config nonint do_spi 0"
+      when: (SPI == True) and (spi_status.stdout != '0')
+
+    - name: Disable SPI
+      shell: "raspi-config nonint do_spi 1"
+      when: (SPI == False) and (spi_status.stdout != '1')
+
+    #P5 I2C
+    - name: Get I2C status
+      shell: "raspi-config nonint get_i2c"
+      register: i2c_status
+      changed_when: False
+
+    - name: Print I2C status
+      debug:
+        msg: "I2C status is: {{ i2c_status.stdout }}"
+
+    - name: Enable I2C
+      shell: "raspi-config nonint do_i2c 0"
+      when: (I2C == True) and (i2c_status.stdout != '0')
+
+    - name: Disable I2C
+      shell: "raspi-config nonint do_i2c 1"
+      when: (I2C == False) and (i2c_status.stdout != '1')
+
+    #P6 Serial
+    - name: Get serial status
+      shell: "raspi-config nonint get_serial"
+      register: serial_status
+      changed_when: False
+
+    - name: Get serialHW status
+      shell: "raspi-config nonint get_serial_hw"
+      register: serialhw_status
+      changed_when: False
+
+    - name: Print serial status
+      debug:
+        msg: "Serial status is: {{ serial_status.stdout }}"
+
+    - name: Print serialHW status
+      debug:
+        msg: "SerialHW status is: {{ serialhw_status.stdout }}"
+
+    - name: Enable serial
+      shell: "raspi-config nonint do_serial 0"
+      when: (SERIAL == True) and (serial_status.stdout != '0')
+
+    - name: Disable serial
+      shell: "raspi-config nonint do_serial 1"
+      when: (SERIAL == False) and (serial_status.stdout != '1')
+
+    #P7 1-Wire
+    - name: Get Onewire status
+      shell: "raspi-config nonint get_onewire"
+      register: onewire_status
+      changed_when: False
+
+    - name: Print Onewire status
+      debug:
+        msg: "Onewire status is: {{ onewire_status.stdout }}"
+
+    - name: Enable OneWire
+      shell: "raspi-config nonint do_onewire 0"
+      when: (ONEWIRE == True) and (onewire_status.stdout != '0')
+
+    - name: Disable OneWire
+      shell: "raspi-config nonint do_onewire 1"
+      when: (ONEWIRE == False) and (onewire_status.stdout != '1')
+
+    #P8 Remote GPIO
+    - name: Get rGPIO status
+      shell: "raspi-config nonint get_rgpio"
+      register: rgpio_status
+      changed_when: False
+
+    - name: Print rGPIO status
+      debug:
+        msg: "rGPIO status is: {{ rgpio_status.stdout }}"
+
+    - name: Enable Remote GPIO
+      shell: "raspi-config nonint do_rgpio 0"
+      when: (RGPIO == True) and (rgpio_status.stdout != '0')
+
+    - name: Disable Remote GPIO
+      shell: "raspi-config nonint do_rgpio 1"
+      when: (RGPIO == False) and (rgpio_status.stdout != '1')
+
+#6 Overclock
+
+    #Overclock
+    - name: Get overclock
+      shell: "raspi-config nonint get_config_var arm_freq /boot/config.txt"
+      register: pi_overclock
+      changed_when: False
+
+    - name: Print overclock
+      debug: 
+        msg: "Overclock is: {{ pi_overclock.stdout }}"
+
+      #- name: Set overclock
+      #shell: "raspi-config nonint do_overclock {{ OVERCLOCK }}"
+
+
+#7 Advanced Options 
+
+    #A1 Expand Filesystem
+    - name: Check if FS is expandable
+      shell: "raspi-config nonint get_can_expand"
+      register: fs_filled
+      changed_when: False
+
+    - name: Print if FS is expandable or not
+      debug:
+        msg: "Filesystem is expandable! [{{ fs_filled.stdout }}]"
+      when: fs_filled.stdout == '0'
+
+    - name: Expand Filesystem
+      shell: "raspi-config nonint do_expand_rootfs"
+
+    #A2 Overscan
+    - name: Get Overscan status
+      shell: "raspi-config nonint get_overscan"
+      register: pi_overscan
+      changed_when: False
+
+    - name: Print Overscan
+      debug: 
+        msg: "Boot overscan is: {{ pi_overscan.stdout }}"
+
+    - name: Enable Overscan
+      shell: "raspi-config nonint do_overscan {{ OVERSCAN }}"
+      when: OVERSCAN == True
+
+    #A3 Memory Split
+    - name: Get current GPU memory split (1/4)
+      shell: "raspi-config nonint get_config_var gpu_mem /boot/config.txt"
+      register: gpu_mem
+      changed_when: False
+
+    - name: Get current GPU memory split 256 (2/4)
+      shell: "raspi-config nonint get_config_var gpu_mem_256 /boot/config.txt"
+      register: gpu_mem_256
+      changed_when: False
+
+    - name: Get current GPU memory split 512 (3/4)
+      shell: "raspi-config nonint get_config_var gpu_mem_512 /boot/config.txt"
+      register: gpu_mem_512
+      changed_when: False
+
+    - name: Get current GPU memory split 1024 (4/4)
+      shell: "raspi-config nonint get_config_var gpu_mem_1024 /boot/config.txt"
+      register: gpu_mem_1k
+      changed_when: False
+
+    - name: Print current GPU memory split
+      debug:
+        msg: "Current GPU memory split: {{ gpu_mem.stdout }} - {{ gpu_mem_256.stdout }} - {{ gpu_mem_512.stdout }} - {{ gpu_mem_1k.stdout }}"
+
+    - name: Set GPU memory split
+      shell: "raspi-config nonint do_memory_split {{ MEMSPLIT }}"
+      #when: gpu_mem.stdout != MEMSPLIT
+
+    #A4 Audio
+    ### 0 Auto, 1 Force 3.5mm, 2 Force hdmi
+    - name: Set audio out
+      shell: "raspi-config nonint do_audio {{ AUDIO_OUT }}"
+    
+    #A5 Resolution
+    - name: Get HDMI group
+      shell: "raspi-config nonint get_config_var hdmi_group /boot/config.txt"
+      register: hdmi_group
+      changed_when: False
+
+    - name: Get HDMI mode
+      shell: "raspi-config nonint get_config_var hdmi_mode /boot/config.txt"
+      register: hdmi_mode
+      changed_when: False
+
+    - name: Print HDMI group & mode
+      debug: 
+        msg: "HDMI group and mode is: {{ hdmi_group.stdout }} - {{ hdmi_mode.stdout }}"
+
+      #- name: Set HDMI group mode
+      #shell: "raspi-config nonint do_resolution {{ HDMI_GROUP }} {{ HDMI_MOD }}"
+
+    #A6 Pixel Doubling
+    - name: Get pixel doubling
+      shell: "raspi-config nonint get_pixdub"
+      register: pixdub_status
+      changed_when: False
+
+    - name: Print pixel doubling status
+      debug: 
+        msg: "Pixel Doubling is: {{ pixdub_status.stdout }}"
+
+    - name: Enable pixel doubling
+      shell: "raspi-config nonint do_pixdub 0"
+      when: (PIXDUB == True) and (pixdub_status.stdout != '0')
+
+    - name: Disable pixel doubling
+      shell: "raspi-config nonint do_onewire 1"
+      when: (PIXDUB == False) and (pixdub_status.stdout != '1')
+
+    #A7 GL Driver
+    #- name: Set OpenGL desktop driver
+    #shell: "raspi-config nonint do_gldriver {{ GLDRIVER }}"
+
+#8 Update
+    #^^^Look at the top^^^
+
+#REBOOT
+    - name: Reboot
+      become: True
+      shell: "sleep 1 && shutdown -r now +1"
+      async: 1
+      poll: 0
+      notify:
+        - wait-for-reboot
+      when: REBOOT == True
+
+  #HANDLERS
+  handlers:
+    - name: wait-for-reboot
+      wait_for_connection:
+        delay: "5"
+        timeout: "300"
