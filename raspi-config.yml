@@ -20,7 +20,7 @@
     VNC: False
     SPI: False
     I2C: True
-    ONEWIRE: True
+    ONEWIRE: False
     RGPIO: False
     WIFI_COUNTRY: "IT"
     BOOTWAIT: False
