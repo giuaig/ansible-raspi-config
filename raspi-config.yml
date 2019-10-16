@@ -7,7 +7,7 @@
   vars:
     REBOOT: True #Should i reboot at the end of this playbook?
     UPDATE: True
-    HOSTNAME: "picampo"
+    HOSTNAME: "picasa"
     MEMSPLIT: "128"
     BOOTBEHAVIOUR: "B1" #B1 cli, B2 cli autologin, B3 desktop, B4 desktop autologin
     LOCALE: "it_IT.UTF-8"
@@ -164,6 +164,7 @@
       shell: "raspi-config nonint get_wifi_country"
       register: wifi_country
       changed_when: False
+      ignore_errors: True #to avoid error when WiFi is not present
 
     - name: Print current WiFi country
       debug: 
