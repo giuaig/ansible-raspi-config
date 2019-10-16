@@ -1,12 +1,11 @@
 # ansible-raspi-config
-Run raspi-config via Ansible
+This playbook configure basic settings for the Raspberry Pi headless thanks to Ansible. No needs to run raspi-config utility on a display!
 
-Configure basic settings for the Raspberry Pi with Ansible without the need to run raspi-config utility.
+Heavily based on the `raspi-config nonint` option, but NOT 100% ported!
+Change vars at the beginning of `raspi-config.yml` file and `hosts` to suit your needs.
 
-Heavily based on the raspi-config nonint option, but NOT 100% ported!
-Change vars at the beginning of yml file to suit your needs.
-
-Run with: "ansible-playbook -i hosts raspi-config.yml"
+Run with: `ansible-playbook -i hosts raspi-config.yml`
+Don't forget to `touch ssh` in the SD */boot* partitions! 
 
 Works:
 - Change hostname
