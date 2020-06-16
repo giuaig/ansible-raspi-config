@@ -92,7 +92,7 @@
 
     - name: Disable network names
       shell: "raspi-config nonint do_net_names 1"
-      when: (NETNAMES == True) and (pi_netnames.stdout != '1')
+      when: (NETNAMES == False) and (pi_netnames.stdout != '1')
 
 #3 Boot Options
 
