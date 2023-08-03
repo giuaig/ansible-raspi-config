@@ -11,8 +11,8 @@
     MEMSPLIT: "128"
     BOOTBEHAVIOUR: "B1" #B1 cli, B2 cli autologin, B3 desktop, B4 desktop autologin
     LOCALE: "it_IT.UTF-8"
-    TIMEZONE: "Europe/Rome"
-    XKBLAYOUT: "it" #default "gb"
+    TIMEZONE: "Europe/Berlin"
+    XKBLAYOUT: "de" #default "gb"
     NETNAMES: False
     SSH: True
     SERIAL: True
@@ -22,7 +22,7 @@
     I2C: True
     ONEWIRE: False
     RGPIO: False
-    WIFI_COUNTRY: "IT"
+    WIFI_COUNTRY: "DE"
     BOOTWAIT: False
     BOOTSPLASH: False
     OVERSCAN: False
